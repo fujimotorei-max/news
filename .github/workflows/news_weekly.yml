@@ -1,25 +1,51 @@
-name: Weekly News Notify
+name: Weekly Medical News Notify
 
 on:
-  schedule:
-    - cron: "0 8 * * 0"  # UTC8:00 = JST17:00 (日曜)
   workflow_dispatch:
+  schedule:
+    # JST 17:00 = UTC 08:00
+    # Sunday in JST is also Sunday in UTC at 08:00
+    - cron: "0 8 * * 0"
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install
+
+      - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run
+
+      # 変数が渡ってるかを安全に確認（値は表示しない）
+      - name: Debug env (names only)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          GOOGLE_SEARCH_CX: ${{ secrets.GOOGLE_SEARCH_CX }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: |
-          python src/news_weekly.py
+          python - << 'PY'
+          import os
+          keys = ["GOOGLE_SEARCH_API_KEY","GOOGLE_SEARCH_CX","GEMINI_API_KEY","LINE_CHANNEL_ACCESS_TOKEN","LINE_USER_ID"]
+          for k in keys:
+            print(k, "OK" if os.getenv(k) else "MISSING")
+          PY
+
+      - name: Run weekly medical
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          GOOGLE_SEARCH_CX: ${{ secrets.GOOGLE_SEARCH_CX }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: python src/news_weekly_med.py
