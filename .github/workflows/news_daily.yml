@@ -2,7 +2,7 @@ name: Daily News Notify
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # UTC12:00 = JST21:00
+    - cron: "0 8 * * *"  # UTC8:00 = JST17:00
   workflow_dispatch:
 
 jobs:
