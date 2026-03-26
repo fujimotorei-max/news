@@ -75,12 +75,12 @@ def main():
 
     for q in society_system_queries:
         collected["society_system"].extend(search(q, num=5, date_restrict=date_restrict,
-                                                  allow_domains=allow_domains, block_domains=block_domains
+                                                  allow_domains=allow_domains, block_domains=block_domains,
                                                   days=2
                                                   ))
     for q in talk_queries:
         collected["talking_points"].extend(search(q, num=5, date_restrict=date_restrict,
-                                                  allow_domains=allow_domains, block_domains=block_domains
+                                                  allow_domains=allow_domains, block_domains=block_domains,
                                                   days=2))
 
     # 重複除去
