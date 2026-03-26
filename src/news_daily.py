@@ -23,7 +23,7 @@ def dedupe_by_link(items: list[dict]) -> list[dict]:
 def main():
     # 「今日/昨日」寄せ：d2（過去2日）
     date_restrict = "d2"
-    today_str = datetime.now().strftime("%m月%d日")
+    today_str = datetime.now().strftime("%Y年%m月%d日")
 
     # ★重要ニュース向けの検索クエリ（地方小ネタを拾いにくい言葉に寄せる）
     economy_queries = [
@@ -64,14 +64,24 @@ def main():
 
     # 候補数は多めに確保（後段の編集で絞る）
     for q in economy_queries:
-        collected["economy"].extend(search(q, num=5, date_restrict=date_restrict,
-                                          allow_domains=allow_domains, block_domains=block_domains))
+        collected["economy"].extend(search(q,
+                                           num=5,
+                                           date_restrict=date_restrict,
+                                           allow_domains=allow_domains,
+                                           block_domains=block_domains,
+                                           days=2
+                                          )
+                                   )
+
     for q in society_system_queries:
         collected["society_system"].extend(search(q, num=5, date_restrict=date_restrict,
-                                                 allow_domains=allow_domains, block_domains=block_domains))
+                                                 allow_domains=allow_domains, block_domains=block_domains
+                                                 days=2
+                                                 ))
     for q in talk_queries:
         collected["talking_points"].extend(search(q, num=5, date_restrict=date_restrict,
-                                                 allow_domains=allow_domains, block_domains=block_domains))
+                                                 allow_domains=allow_domains, block_domains=block_domains
+                                                 days=2))
 
     # 重複除去
     collected["economy"] = dedupe_by_link(collected["economy"])
