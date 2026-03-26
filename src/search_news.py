@@ -5,29 +5,11 @@ from typing import List, Dict, Optional
 import re
 from datetime import datetime, timedelta
 
-def _is_recent(snippet: str, days: int = 7) -> bool:
-    if not snippet:
-        return False
-
-    # 2026年3月20日 / 2026/03/20 / 2026-03-20 対応
-    m = re.search(r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})", snippet)
-    if not m:
-        return False
-
-    y, mth, d = map(int, m.groups())
-    try:
-        dt = datetime(y, mth, d)
-    except:
-        return False
-
-    return datetime.now() - dt <= timedelta(days=days)
-
 API_KEY = os.environ["GOOGLE_SEARCH_API_KEY"]
 CX = os.environ["GOOGLE_SEARCH_CX"]
 
-# 「全国レベルの重要ニュース」寄せの信頼ソース
+# 信頼ソース
 TRUSTED_DOMAINS = [
-    # 国内主要メディア
     "www.nhk.or.jp",
     "www3.nhk.or.jp",
     "www.nikkei.com",
@@ -37,10 +19,8 @@ TRUSTED_DOMAINS = [
     "www.sankei.com",
     "www.jiji.com",
     "www.kyodo.co.jp",
-    # 国際通信（日本関連が強い）
     "jp.reuters.com",
     "www.bloomberg.co.jp",
-    # 政府・公的機関（制度系の一次情報）
     "www.kantei.go.jp",
     "www.mhlw.go.jp",
     "www.mof.go.jp",
@@ -51,27 +31,81 @@ TRUSTED_DOMAINS = [
     "www8.cao.go.jp",
 ]
 
-# 明確に落としたいもの（会話用でも邪魔になりがち）
+# 除外
 BLOCKED_DOMAINS = [
     "prtimes.jp",
 ]
 
-def _domain_ok(link: str, allow_domains: Optional[List[str]], block_domains: Optional[List[str]]) -> bool:
+
+# -----------------------------
+# ドメインフィルタ
+# -----------------------------
+def _domain_ok(link: str,
+               allow_domains: Optional[List[str]],
+               block_domains: Optional[List[str]]) -> bool:
+
     if block_domains:
         for d in block_domains:
             if d in link:
                 return False
+
     if allow_domains:
         return any(d in link for d in allow_domains)
+
     return True
 
-def search(query: str, num: int = 10, date_restrict: str = "d2",
+
+# -----------------------------
+# 記事日付判定（n日以内）
+# -----------------------------
+def _is_recent(snippet: str, days: int = 7) -> bool:
+    if not snippet:
+        return False
+
+    today = datetime.now().date()
+
+    # 年あり日付
+    m = re.search(r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})", snippet)
+    if m:
+        y, mth, d = map(int, m.groups())
+        try:
+            article_date = datetime(y, mth, d).date()
+            return today - article_date <= timedelta(days=days)
+        except:
+            return False
+
+    # 年なし日付（3月26日 / 03/26）
+    m = re.search(r"(\d{1,2})[月/-](\d{1,2})", snippet)
+    if m:
+        mth, d = map(int, m.groups())
+        try:
+            article_date = datetime(today.year, mth, d).date()
+            return today - article_date <= timedelta(days=days)
+        except:
+            return False
+
+    return False
+
+
+# -----------------------------
+# Google検索
+# -----------------------------
+def search(query: str,
+           num: int = 10,
+           date_restrict: str = "d2",
            allow_domains: Optional[List[str]] = None,
-           block_domains: Optional[List[str]] = None) -> List[Dict]:
+           block_domains: Optional[List[str]] = None,
+           days: int = 7) -> List[Dict]:
     """
     date_restrict:
-      d1=過去1日, d2=過去2日, d7=過去7日 ... (Google CSEの仕様)
+      d1=過去1日, d2=過去2日, d7=過去7日
+      （Googleのクロール日基準）
+
+    days:
+      記事公開日ベースでのフィルタ日数
+      Daily=2, Weekly=7
     """
+
     url = "https://www.googleapis.com/customsearch/v1"
     params = {
         "key": API_KEY,
@@ -81,28 +115,35 @@ def search(query: str, num: int = 10, date_restrict: str = "d2",
         "gl": "jp",
         "num": num,
         "dateRestrict": date_restrict,
-        # sort=date は環境によって効き方がぶれるので dateRestrict を主に使う
     }
+
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
     data = r.json()
 
     results: List[Dict] = []
     items = data.get("items", []) or []
+
     for item in items:
         link = item.get("link", "") or ""
         if not link:
             continue
+
+        # ドメインフィルタ
         if not _domain_ok(link, allow_domains, block_domains):
             continue
 
         snippet = item.get("snippet", "")
-        if not _is_recent(snippet, 7):
+
+        # 日付フィルタ
+        if not _is_recent(snippet, days):
             continue
+
         results.append({
-           "title": item.get("title"),
-           "snippet": snippet,
-           "link": link,
-           "source": item.get("displayLink"),
-       })
+            "title": item.get("title"),
+            "snippet": snippet,
+            "link": link,
+            "source": item.get("displayLink"),
+        })
+
     return results
