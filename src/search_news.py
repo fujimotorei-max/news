@@ -96,10 +96,13 @@ def search(query: str, num: int = 10, date_restrict: str = "d2",
         if not _domain_ok(link, allow_domains, block_domains):
             continue
 
-        results.append({
-            "title": item.get("title"),
-            "snippet": item.get("snippet"),
-            "link": link,
-            "source": item.get("displayLink"),
-        })
+        snippet = item.get("snippet", "")
+        if not _is_recent(snippet, 7):
+            continue
+    　　　results.append({
+           "title": item.get("title"),
+           "snippet": snippet,
+           "link": link,
+           "source": item.get("displayLink"),
+       })
     return results
