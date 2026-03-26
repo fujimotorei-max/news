@@ -27,19 +27,22 @@ def main():
     # 今日の日付（検索のノイズを減らすために足す）
     today_str = datetime.now().strftime("%m月%d日")
 
-    # ★医療Weekly：国試・実習に刺さる“制度/標準診療/定義”寄せクエリ
-    queries = [
-        # 制度
+    # ★医療Weekly
+    policy_queries = [
         "厚生労働省 医療 方針",
         "診療報酬 改定",
         "医療制度 改正 日本",
         "医師 働き方改革",
-        # ガイドライン
+    ]
+    
+    guideline_queries = [
         "学会 ガイドライン 改訂 医療",
         "診断基準 改訂 日本 医療",
         "感染症 指針 改訂 日本",
         "予防接種 制度 変更",
-        # 医療ニュース
+    ]
+    
+    medical_news_queries = [
         "医療事故 日本",
         "医療訴訟 日本",
         "救急搬送 日本 問題",
@@ -49,25 +52,28 @@ def main():
         "病院 経営 日本",
         "薬 不足 日本",
         "感染症 日本 ニュース",
-        "災害医療 日本",
     ]
 
     allow_domains = TRUSTED_DOMAINS
     block_domains = BLOCKED_DOMAINS
 
     results = []
-    for q in queries:
-        results.extend(
-            search(
-                q,
-                num=5,
-                date_restrict=date_restrict,
-                allow_domains=allow_domains,
-                block_domains=block_domains,
-            )
-        )
+    
+    for q in policy_queries:
+        results.extend(search(q, num=3, date_restrict=date_restrict,
+                              allow_domains=allow_domains, block_domains=block_domains))
+    for q in guideline_queries:
+        results.extend(search(q, num=3, date_restrict=date_restrict,
+                              allow_domains=allow_domains, block_domains=block_domains))
+    for q in medical_news_queries:
+        results.extend(search(q, num=3, date_restrict=date_restrict,
+                              allow_domains=allow_domains, block_domains=block_domains))
 
     results = dedupe_by_link(results)
+    results = results[:25]
+    if not results:
+        push_line("今週は重要な医療ニュースはありませんでした。")
+        return
 
     material = json.dumps({"items": results}, ensure_ascii=False, indent=2)
 
@@ -87,13 +93,6 @@ def main():
         + "可能であれば、特定の分野に偏らないように選んでください。\n\n"
         + "研究段階・新薬・単一施設の症例報告・宣伝・煽り記事は除外してください。\n"
         + "必ず提供されたニュース素材の情報のみを使用し、推測や一般論は書かないでください。"
-        + "\n\n出力形式：\n"
-        + "【今週の医療ニュース】\n"
-        + "■タイトル\n"
-        + "・何が起きたか\n"
-        + "・なぜ重要か\n"
-        + "・医学生としてどこを理解すべきか\n"
-        + "・元記事URL\n"
     )
 
     edited = gemini_generate(prompt)
