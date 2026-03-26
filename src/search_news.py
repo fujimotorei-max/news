@@ -99,7 +99,7 @@ def search(query: str, num: int = 10, date_restrict: str = "d2",
         snippet = item.get("snippet", "")
         if not _is_recent(snippet, 7):
             continue
-    　　　results.append({
+        results.append({
            "title": item.get("title"),
            "snippet": snippet,
            "link": link,
