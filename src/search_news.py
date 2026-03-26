@@ -2,6 +2,25 @@
 import os
 import requests
 from typing import List, Dict, Optional
+import re
+from datetime import datetime, timedelta
+
+def _is_recent(snippet: str, days: int = 7) -> bool:
+    if not snippet:
+        return False
+
+    # 2026年3月20日 / 2026/03/20 / 2026-03-20 対応
+    m = re.search(r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})", snippet)
+    if not m:
+        return False
+
+    y, mth, d = map(int, m.groups())
+    try:
+        dt = datetime(y, mth, d)
+    except:
+        return False
+
+    return datetime.now() - dt <= timedelta(days=days)
 
 API_KEY = os.environ["GOOGLE_SEARCH_API_KEY"]
 CX = os.environ["GOOGLE_SEARCH_CX"]
